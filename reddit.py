@@ -1,5 +1,5 @@
 #! python3
-# Rewritten code to explain the reddit ranking algorithms
+# Rewritten code to explain the Reddit ranking algorithms
 
 from datetime import datetime, timedelta
 from math import log
@@ -11,9 +11,11 @@ def epoch_seconds(date):
     td = date - epoch
     return td.days * 86400 + td.seconds + (float(td.microseconds) / 1000000)
 
+# Define a scoring function
 def score(ups, downs):
     return ups - downs
 
+# Define a hot function
 def hot(ups, downs, date):
     s = score(ups, downs)
     order = log(max(abs(s), 1), 10)
