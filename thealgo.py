@@ -11,7 +11,7 @@ import random
 import os, json
 
 
-# Create a dictionary of posts
+# Create a list of posts
 posts = ['post 1', 'post 2', 'post 3', 'post 4', 'post 5', 'post 6', 'post 7']
 
 # Original ranking with 0 score for each post
@@ -47,6 +47,5 @@ while True:
     sorted_rank = sorted(data.items(), key=lambda x: x[1], reverse=True)
     print(sorted_rank)
     time.sleep(random.randint(2,30))
-
-    
+  
 
