@@ -17,6 +17,7 @@ posts at random would score.
 """
 
 import argparse
+import json
 import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -123,6 +124,7 @@ def simulate(texts, hours=24, visitors_per_hour=600, front_page=10, sort='hot',
         for i, text in enumerate(texts, start=1)
     ]
     scores, random_scores = [], []
+    snapshot_step = max(1, round(snapshot_every * 60))
 
     for minute in range(1, minutes + 1):
         now = START + timedelta(minutes=minute)
@@ -133,7 +135,7 @@ def simulate(texts, hours=24, visitors_per_hour=600, front_page=10, sort='hot',
             random_scores.append(random_score)
             for _ in range(poisson(rng, visitors_per_hour / 60)):
                 vote(rng, pick_post(rng, ordered, front_page))
-        if on_snapshot and (minute == minutes or minute % int(snapshot_every * 60) == 0):
+        if on_snapshot and (minute == minutes or minute % snapshot_step == 0):
             on_snapshot(now, rank([p for p in posts if p.created <= now], sort, decay))
 
     final = rank([p for p in posts if p.created <= now], sort, decay)[:front_page]
@@ -198,6 +200,57 @@ def compare(texts, runs, hours, visitors_per_hour):
               f"{f'{hits:.1f} of {front_page}':>26}")
 
 
+def record_replay(texts, seed, hours=24, visitors_per_hour=600, front_page=10,
+                  decay=HOT_DECAY, frame_minutes=10):
+    """Run every sort on the same seed and keep a frame every frame_minutes.
+
+    Returns plain data for viewer.html: the posts, and per sort the run's
+    score plus frames of the ranking and vote counts.
+    """
+    runs, posts = {}, []
+    for sort in SORTS:
+        frames = []
+
+        def keep(now, ordered):
+            page_score, random_score = front_page_score(ordered, front_page) if ordered else (None, None)
+            frames.append({
+                't': round((now - START).total_seconds() / 60),
+                'o': [p.id for p in ordered],
+                'v': [n for p in ordered for n in (p.ups, p.downs)],
+                's': page_score and round(page_score, 4),
+                'r': random_score and round(random_score, 4),
+            })
+
+        result = simulate(texts, hours=hours, visitors_per_hour=visitors_per_hour,
+                          front_page=front_page, sort=sort, decay=decay, seed=seed,
+                          snapshot_every=frame_minutes / 60, on_snapshot=keep)
+        frames.insert(0, {'t': 0, 'o': [], 'v': [], 's': None, 'r': None})
+        runs[sort] = {'score': round(result.score, 4), 'random': round(result.random_score, 4),
+                      'hits': result.hits, 'frames': frames}
+        posts = result.posts
+
+    return {
+        'meta': {'seed': seed, 'hours': hours, 'visitors': visitors_per_hour, 'frontPage': front_page,
+                 'decayHours': round(decay / 3600, 2), 'start': START.isoformat(),
+                 'frameMinutes': frame_minutes},
+        'posts': [{'id': p.id, 'text': p.text, 'quality': round(p.quality, 3),
+                   'created': round((p.created - START).total_seconds() / 60)} for p in posts],
+        'runs': runs,
+    }
+
+
+def write_html(replay, path, standalone=True):
+    """Fill viewer.html with a replay. standalone adds the document head for opening locally."""
+    template = Path(__file__).with_name('viewer.html').read_text(encoding='utf-8')
+    data = json.dumps(replay, separators=(',', ':'), ensure_ascii=False).replace('</', '<\\/')
+    page = template.replace('__RUN_DATA__', data)
+    if standalone:
+        page = ('<!doctype html>\n<html lang="en">\n<meta charset="utf-8">\n'
+                '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+                + page + '\n</html>\n')
+    Path(path).write_text(page, encoding='utf-8')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--posts', default=Path(__file__).with_name('posts.txt'),
@@ -214,11 +267,23 @@ def main():
     parser.add_argument('--compare', action='store_true',
                         help='score every sort, decay and front-page size instead of one run')
     parser.add_argument('--runs', type=int, default=10, help='--compare only: runs per setting (default: 10)')
+    parser.add_argument('--html', metavar='FILE',
+                        help='write an animated replay of every sort to FILE and open it in a browser')
     args = parser.parse_args()
     texts = load_posts(args.posts)
 
     if args.compare:
         compare(texts, args.runs, args.hours, args.visitors)
+        return
+
+    if args.html:
+        seed = args.seed if args.seed is not None else random.randrange(10_000)
+        replay = record_replay(texts, seed, hours=args.hours, visitors_per_hour=args.visitors,
+                               front_page=args.front_page, decay=args.decay * 3600)
+        write_html(replay, args.html)
+        print(f"Wrote {args.html} (seed {seed}). Open it in a browser to watch the replay.")
+        for sort, run in replay['runs'].items():
+            print(f"  {sort:<5} front-page score {run['score']:.2f}")
         return
 
     result = simulate(

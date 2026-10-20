@@ -1,0 +1,390 @@
+<title>Front Page Replay</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: replay console. Front page on the left as the stage, clock, score chart and controls in a side rail; stacks on phones. */
+:root {
+  --bg: #f2f3f7;
+  --surface: #ffffff;
+  --fg: #151924;
+  --muted: #5a6173;
+  --line: #dde0e9;
+  --accent: #2f45c4;
+  --accent-soft: #e6e9fb;
+  --up: #1d7f47;
+  --down: #b83b34;
+  --gold: #a76a12;
+  --gold-soft: #fbf0dc;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --row: 4.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f121a; --surface: #171b26; --fg: #e8eaf1; --muted: #9ba2b5; --line: #29303f;
+    --accent: #8d9dff; --accent-soft: #232a4a; --up: #52c486; --down: #f07b72;
+    --gold: #e8b552; --gold-soft: #3a2f19; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f121a; --surface: #171b26; --fg: #e8eaf1; --muted: #9ba2b5; --line: #29303f;
+  --accent: #8d9dff; --accent-soft: #232a4a; --up: #52c486; --down: #f07b72;
+  --gold: #e8b552; --gold-soft: #3a2f19; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 0.9375rem/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 1.5rem 2.5rem;
+}
+.shell { max-width: 72rem; margin: 0 auto; display: grid; gap: 1.5rem; }
+
+header { display: grid; gap: 0.35rem; max-width: 46rem; }
+.eyebrow { font: 500 0.75rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(1.75rem, 4vw, 2.5rem)/1.1 var(--display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 1.5rem; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } .rail { order: -1; } }
+
+/* Front page */
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 0.75rem; min-width: 0; }
+.stage-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.25rem 1rem; padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--line); }
+.stage-head h2 { font: 600 1.05rem/1.2 var(--display); margin: 0; }
+.legend { font-size: 0.8125rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem; }
+.list { position: relative; overflow: hidden; }
+.row {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--row);
+  display: grid; grid-template-columns: 2rem 4.25rem minmax(0, 1fr) auto; gap: 0.75rem; align-items: center;
+  padding: 0 1.1rem; border-bottom: 1px solid var(--line);
+  transform: translateY(calc(var(--row) * var(--r, 0)));
+  transition: transform 450ms cubic-bezier(.2,.7,.2,1), opacity 300ms ease;
+  background: var(--surface);
+}
+.row.off { opacity: 0; pointer-events: none; }
+.row.is-best { background: linear-gradient(90deg, var(--gold-soft), var(--surface) 55%); }
+.rank { font: 500 0.875rem/1 var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.votes { display: grid; gap: 0.15rem; font-variant-numeric: tabular-nums; }
+.net { font: 600 1.05rem/1 var(--mono); }
+.split { font: 400 0.75rem/1 var(--mono); color: var(--muted); white-space: nowrap; }
+.split .u { color: var(--up); } .split .d { color: var(--down); }
+.text { min-width: 0; display: grid; gap: 0.2rem; }
+.text p { margin: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.35; font-size: 0.9rem; }
+.meta { font: 400 0.75rem/1 var(--mono); color: var(--muted); display: flex; gap: 0.75rem; white-space: nowrap; }
+.q { display: grid; justify-items: end; gap: 0.3rem; font: 500 0.75rem/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter { width: 3.5rem; height: 0.3rem; border-radius: 1rem; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--muted); }
+.is-best .meter i { background: var(--gold); }
+.star { color: var(--gold); font-size: 0.85rem; }
+.row:not(.is-best) .star { visibility: hidden; }
+.empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 0.9rem; }
+
+/* Rail */
+.rail { display: grid; gap: 1rem; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 0.75rem; padding: 1rem 1.1rem; display: grid; gap: 0.85rem; }
+.clock { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.clock b { font: 700 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.clock span { color: var(--muted); font: 400 0.8125rem/1.2 var(--mono); text-align: right; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.stat { display: grid; gap: 0.2rem; }
+.stat dt { font: 500 0.6875rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.stat dd { margin: 0; font: 600 1.1rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.controls { display: flex; align-items: center; gap: 0.6rem; }
+button, select { font: inherit; color: inherit; }
+.play {
+  width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 0; flex: none;
+  background: var(--accent); color: var(--surface); cursor: pointer; display: grid; place-items: center;
+}
+.play svg { width: 1rem; height: 1rem; fill: currentColor; }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+select { background: var(--surface); border: 1px solid var(--line); border-radius: 0.4rem; padding: 0.3rem 0.4rem; font-size: 0.8125rem; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sorts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem; }
+.sorts button {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 0.5rem; padding: 0.45rem 0.25rem;
+  cursor: pointer; display: grid; gap: 0.15rem; justify-items: center;
+}
+.sorts button b { font: 600 0.875rem/1 var(--body); }
+.sorts button span { font: 400 0.75rem/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sorts button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.sorts button[aria-pressed="true"] b { color: var(--accent); }
+.sort-note { margin: 0; font-size: 0.8125rem; color: var(--muted); }
+.label { font: 500 0.6875rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+.score-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.score-head b { font: 700 1.75rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.score-head span { font-size: 0.8125rem; color: var(--muted); text-align: right; }
+svg.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font: 10px var(--mono); }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.chart .area { fill: var(--accent-soft); }
+.chart .base { fill: none; stroke: var(--muted); stroke-width: 1.25; stroke-dasharray: 4 3; }
+.chart .cursor { stroke: var(--fg); stroke-width: 1; }
+.chart .dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.key { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.75rem; color: var(--muted); }
+.key i { display: inline-block; width: 1rem; height: 0; vertical-align: middle; margin-right: 0.35rem; border-top: 2px solid var(--accent); }
+.key i.dash { border-top: 1.5px dashed var(--muted); }
+.foot { font: 400 0.75rem/1.5 var(--mono); color: var(--muted); }
+
+@media (max-width: 520px) {
+  :root { --row: 5.25rem; }
+  .row { grid-template-columns: 1.4rem 3.6rem minmax(0, 1fr); gap: 0.6rem; padding: 0 0.8rem; }
+  .q { display: none; }
+  .row .meta .qm { display: inline; }
+}
+.meta .qm { display: none; }
+@media (prefers-reduced-motion: reduce) { .row { transition: none; } }
+</style>
+
+<div class="shell">
+  <header>
+    <span class="eyebrow">rank_simulator · replay</span>
+    <h1>Front Page Replay</h1>
+    <p id="intro">One simulated day on a discussion forum. Visitors mostly read the front page, so the ranking decides which posts get seen and voted on. Switch sorts to replay the same day under a different algorithm.</p>
+  </header>
+
+  <div class="layout">
+    <section class="stage" aria-label="Front page">
+      <div class="stage-head">
+        <h2 id="stage-title">Front page</h2>
+        <span class="legend"><span class="star" aria-hidden="true">★</span> one of the best posts live right now (by hidden quality)</span>
+      </div>
+      <div class="list" id="list"><div class="empty" id="empty">No posts yet. The first one goes up shortly.</div></div>
+    </section>
+
+    <aside class="rail">
+      <div class="panel">
+        <div class="clock"><b id="clock">06:00</b><span id="elapsed">Mon · 0h in</span></div>
+        <div class="controls">
+          <button class="play" id="play" type="button" aria-label="Play">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path id="play-icon" d="M4 2.5v11l9-5.5z"/></svg>
+          </button>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Time in the simulation">
+          <select id="speed" aria-label="Playback speed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </div>
+        <dl class="stats" style="margin:0">
+          <div class="stat"><dt>Posts live</dt><dd id="live">0</dd></div>
+          <div class="stat"><dt>Votes</dt><dd id="votes">0</dd></div>
+          <div class="stat"><dt>Best shown</dt><dd id="hits">0</dd></div>
+        </dl>
+      </div>
+
+      <div class="panel">
+        <span class="label">Sort</span>
+        <div class="sorts" id="sorts" role="group" aria-label="Sort"></div>
+        <p class="sort-note" id="sort-note"></p>
+      </div>
+
+      <div class="panel">
+        <div class="score-head">
+          <div><span class="label">Front-page score</span><br><b id="score">–</b></div>
+          <span id="score-note">so far this run</span>
+        </div>
+        <svg class="chart" id="chart" viewBox="0 0 320 150" role="img" aria-label="Front-page score over the run"></svg>
+        <div class="key"><span><i></i>front page right now</span><span><i class="dash"></i>random front page</span></div>
+        <p class="sort-note">1.00 means readers were shown the best posts available. The score is averaged over every minute.</p>
+      </div>
+    </aside>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script id="run-data" type="application/json">__RUN_DATA__</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById('run-data').textContent);
+  const M = DATA.meta;
+  const N = M.frontPage;
+  const START = new Date(M.start);
+  const posts = new Map(DATA.posts.map(p => [p.id, p]));
+  const SORT_NOTES = {
+    hot: `Votes count on a log scale, and every ${M.decayHours}h of age costs as much as 10× the votes. The usual forum front page.`,
+    top: 'Upvotes minus downvotes, ignoring age. Early leaders tend to stay on top.',
+    new: 'Newest first, whatever the votes.',
+    best: 'Wilson lower bound: how sure we can be a post is good, given its votes. Usually used for replies.',
+  };
+  const sortNames = Object.keys(DATA.runs);
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const $ = id => document.getElementById(id);
+  const list = $('list'), scrub = $('scrub');
+  list.style.height = `calc(var(--row) * ${N})`;
+  $('intro').textContent = `${DATA.posts.length} posts, about ${M.visitors} visitors an hour, ${M.hours} hours. Visitors mostly read the front page, so the ranking decides which posts get seen and voted on. Switch sorts to replay the same day under a different algorithm.`;
+  $('stage-title').textContent = `Front page · top ${N}`;
+  $('foot').textContent = `Seed ${M.seed}. Regenerate with: python3 simulate.py --html replay.html --seed ${M.seed}`;
+
+  let sort = sortNames.includes('hot') ? 'hot' : sortNames[0];
+  let idx = 0, playing = false, timer = null;
+
+  // Sort buttons
+  for (const name of sortNames) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.sort = name;
+    b.innerHTML = `<b>${name}</b><span>${DATA.runs[name].score.toFixed(2)}</span>`;
+    b.title = `Score for the whole run: ${DATA.runs[name].score.toFixed(2)}`;
+    b.addEventListener('click', () => { sort = name; drawChart(); render(); });
+    $('sorts').append(b);
+  }
+
+  // One row element per post, reused as it moves
+  const rows = new Map();
+  function rowFor(id) {
+    if (rows.has(id)) return rows.get(id);
+    const p = posts.get(id);
+    const el = document.createElement('div');
+    el.className = 'row off';
+    el.style.setProperty('--r', N);
+    el.innerHTML = `
+      <span class="rank"></span>
+      <span class="votes"><span class="net"></span><span class="split"><span class="u"></span> <span class="d"></span></span></span>
+      <span class="text"><p></p><span class="meta"><span class="age"></span><span class="qm">q ${p.quality.toFixed(2)}</span><span class="star" aria-label="one of the best posts live">★</span></span></span>
+      <span class="q"><span>q ${p.quality.toFixed(2)}</span><span class="meter"><i style="width:${(p.quality * 100).toFixed(0)}%"></i></span></span>`;
+    el.querySelector('p').textContent = p.text;
+    el.querySelector('p').title = p.text;
+    list.append(el);
+    rows.set(id, el);
+    return el;
+  }
+
+  function fmtAge(min) {
+    min = Math.max(0, Math.round(min));
+    return min >= 60 ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}` : `${min}m`;
+  }
+
+  function render() {
+    const frames = DATA.runs[sort].frames;
+    const f = frames[idx];
+    const now = new Date(START.getTime() + f.t * 60000);
+    $('clock').textContent = now.toISOString().slice(11, 16);
+    $('elapsed').textContent = `${now.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })} · ${fmtAge(f.t)} in`;
+    scrub.value = idx;
+
+    const live = f.o;
+    const top = live.slice(0, N);
+    const bestIds = new Set([...live].sort((a, b) => posts.get(b).quality - posts.get(a).quality).slice(0, N));
+    const onPage = new Set(top);
+    let votes = 0;
+    const counts = new Map();
+    live.forEach((id, i) => { counts.set(id, [f.v[2 * i], f.v[2 * i + 1]]); votes += f.v[2 * i] + f.v[2 * i + 1]; });
+
+    for (const [id, el] of rows) {
+      if (!onPage.has(id)) { el.classList.add('off'); el.style.setProperty('--r', N); }
+    }
+    top.forEach((id, r) => {
+      const el = rowFor(id);
+      const [u, d] = counts.get(id);
+      const net = u - d;
+      el.classList.remove('off');
+      el.classList.toggle('is-best', bestIds.has(id));
+      el.style.setProperty('--r', r);
+      el.querySelector('.rank').textContent = r + 1;
+      el.querySelector('.net').textContent = (net > 0 ? '+' : '') + net;
+      el.querySelector('.u').textContent = `▲${u}`;
+      el.querySelector('.d').textContent = `▼${d}`;
+      el.querySelector('.age').textContent = `${fmtAge(f.t - posts.get(id).created)} old`;
+    });
+    $('empty').hidden = live.length > 0;
+
+    const hits = top.filter(id => bestIds.has(id)).length;
+    $('live').textContent = `${live.length}/${DATA.posts.length}`;
+    $('votes').textContent = votes.toLocaleString('en-GB');
+    $('hits').textContent = `${hits}/${top.length || N}`;
+
+    const seen = frames.slice(0, idx + 1).filter(fr => fr.s !== null);
+    const atEnd = idx === frames.length - 1;
+    const runningScore = atEnd ? DATA.runs[sort].score : (seen.length ? seen.reduce((a, fr) => a + fr.s, 0) / seen.length : null);
+    $('score').textContent = runningScore === null ? '–' : runningScore.toFixed(2);
+    $('score-note').textContent = atEnd ? `final · random ${DATA.runs[sort].random.toFixed(2)}` : 'so far this run';
+
+    for (const b of $('sorts').children) b.setAttribute('aria-pressed', String(b.dataset.sort === sort));
+    $('sort-note').textContent = SORT_NOTES[sort] || '';
+    moveCursor();
+  }
+
+  // Score chart
+  const W = 320, H = 150, L = 30, R = 16, T = 8, B = 22, Y0 = 0.4, Y1 = 1.0;
+  const x = t => L + (t / (M.hours * 60)) * (W - L - R);
+  const y = v => T + (1 - (v - Y0) / (Y1 - Y0)) * (H - T - B);
+  const clampY = v => y(Math.max(Y0, Math.min(Y1, v)));
+  let cursorLine, cursorDot;
+  function drawChart() {
+    const svg = $('chart');
+    const frames = DATA.runs[sort].frames.filter(f => f.s !== null);
+    let s = '';
+    for (const v of [0.4, 0.6, 0.8, 1.0]) {
+      s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v.toFixed(1)}</text>`;
+    }
+    const step = M.hours <= 24 ? 6 : 12;
+    for (let h = 0; h <= M.hours; h += step) {
+      s += `<text class="tick" x="${x(h * 60)}" y="${H - 6}" text-anchor="middle">${h}h</text>`;
+    }
+    if (frames.length) {
+      const pts = frames.map(f => `${x(f.t).toFixed(1)},${clampY(f.s).toFixed(1)}`);
+      s += `<path class="area" d="M${x(frames[0].t).toFixed(1)},${y(Y0)} L${pts.join(' L')} L${x(frames[frames.length - 1].t).toFixed(1)},${y(Y0)} Z"/>`;
+      s += `<path class="base" d="M${frames.map(f => `${x(f.t).toFixed(1)},${clampY(f.r).toFixed(1)}`).join(' L')}"/>`;
+      s += `<path class="line" d="M${pts.join(' L')}"/>`;
+    }
+    s += `<line class="cursor" id="cursor" y1="${T}" y2="${H - B}"/><circle class="dot" id="cursor-dot" r="3.5"/>`;
+    svg.innerHTML = s;
+    cursorLine = svg.querySelector('#cursor');
+    cursorDot = svg.querySelector('#cursor-dot');
+  }
+  function moveCursor() {
+    const f = DATA.runs[sort].frames[idx];
+    const cx = x(f.t);
+    cursorLine.setAttribute('x1', cx); cursorLine.setAttribute('x2', cx);
+    cursorDot.setAttribute('cx', cx);
+    cursorDot.setAttribute('cy', f.s === null ? y(Y0) : clampY(f.s));
+    cursorDot.style.visibility = f.s === null ? 'hidden' : 'visible';
+  }
+
+  // Playback: one frame per tick, 1× plays a day in about 36 seconds
+  function setPlaying(on) {
+    playing = on;
+    $('play-icon').setAttribute('d', on ? 'M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z' : 'M4 2.5v11l9-5.5z');
+    $('play').setAttribute('aria-label', on ? 'Pause' : 'Play');
+    clearInterval(timer);
+    if (on) {
+      if (idx >= DATA.runs[sort].frames.length - 1) idx = 0;
+      timer = setInterval(() => {
+        if (idx >= DATA.runs[sort].frames.length - 1) { setPlaying(false); return; }
+        idx++; render();
+      }, 250 / Number($('speed').value));
+    }
+  }
+  $('play').addEventListener('click', () => setPlaying(!playing));
+  $('speed').addEventListener('change', () => { if (playing) setPlaying(true); });
+  scrub.addEventListener('input', () => { idx = Number(scrub.value); render(); });
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input, select, button')) return;
+    if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+    if (e.key === 'ArrowRight') { idx = Math.min(idx + 1, DATA.runs[sort].frames.length - 1); render(); }
+    if (e.key === 'ArrowLeft') { idx = Math.max(idx - 1, 0); render(); }
+  });
+
+  scrub.max = DATA.runs[sort].frames.length - 1;
+  // Open a few hours in so the first view already shows a busy front page
+  idx = Math.min(DATA.runs[sort].frames.findIndex(f => f.t >= 6 * 60), DATA.runs[sort].frames.length - 1);
+  if (idx < 0) idx = 0;
+  drawChart();
+  render();
+  if (!reduceMotion) setTimeout(() => setPlaying(true), 600);
+})();
+</script>

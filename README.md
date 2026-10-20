@@ -31,6 +31,15 @@ python3 simulate.py --help                # hours, visitors, front-page size, ..
 
 Each snapshot prints the front page with every post's votes, age and hidden quality. At the end the run gets a **front-page score**: the average quality of the posts on the front page, relative to the best front page possible at that moment, averaged over every minute. 1.00 means readers always saw the best posts available; the random baseline is what picking posts at random would score. It also reports how many of the truly best posts made the final front page.
 
+### Watching a run
+
+```sh
+python3 simulate.py --html replay.html --seed 42
+open replay.html
+```
+
+Writes a self-contained page ([viewer.html](viewer.html) filled with the run) that replays the day minute by minute. Rows slide as the ranking changes, a ★ marks posts that are truly among the best live right now, and the score chart fills in as you go. All four sorts are recorded on the same seed, so you can switch between them and watch the same day play out differently. Space plays and pauses; the arrow keys step through the day.
+
 ### Tuning with `--compare`
 
 ```sh
